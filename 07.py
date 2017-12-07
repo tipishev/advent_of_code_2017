@@ -17,7 +17,48 @@ class Node:
         self.children = [Node(name, lookup) for name in children_names]
 
     def __repr__(self):
-        return f'({self.name}:{self.children})'
+        return f'{self.name} {self.own_weight}: {self.children}'
+
+    @property
+    def total_weight(self):
+        return self.own_weight + sum([child.total_weight
+                                      for child in self.children])
+
+    def __str__(self):
+        return f'{self.name} {self.total_weight}'
+
+    def pretty(self, level=0):
+        weirdness = '*' if self.is_weird() else ''
+        result = '\t' * level + weirdness + str(self)
+        result += '\n'
+        for child in self.children:
+            result += child.pretty(level + 1)
+        return result
+
+    def is_weird(self):
+        return len(set([c.total_weight for c in self.children])) > 1
+
+    def find_and_describe_deviation(self):
+        children = self.children
+        weird_children = [c for c in children if c.is_weird()]
+        if weird_children:
+            assert len(weird_children) == 1
+            return weird_children.pop().find_and_describe_deviation()
+        counter = MyCounter([c.total_weight for c in children])
+        assert len(counter) == 2
+        most_common, count = counter.most_common(1).pop()
+        least_common = counter.least_common()
+        difference = most_common - least_common
+        deviant = [c for c in children
+                   if c.total_weight == least_common].pop()
+        fixed_own_weight = deviant.own_weight + difference
+        return (
+            f'Normal weight is {most_common} ({count} have it), '
+            f'deviant weight is {least_common} for `{deviant.name}`. '
+            f'To become normal it needs to change own weight from '
+            f'{deviant.own_weight} by {difference} and make it equal to '
+            f'{fixed_own_weight}.'
+        )
 
 
 def parse(line):
@@ -39,10 +80,12 @@ def find_root_name(records):
     return MyCounter(all_names).least_common()
 
 
-#  records = load('07_input.txt')
-records = load('07_input_small.txt')
+records = load('07_input.txt')
+#  records = load('07_input_small.txt')
 
 root_name = find_root_name(records)
 lookup = {name: (own_weight, children_names)
           for name, own_weight, children_names in records}
 tree = Node(root_name, lookup)
+print(tree.pretty())
+print(tree.find_and_describe_deviation())
