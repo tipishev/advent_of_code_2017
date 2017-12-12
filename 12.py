@@ -1,4 +1,4 @@
-INFINITY = 999999
+INF = 999999
 
 
 def parse(filename):
@@ -12,7 +12,7 @@ def parse(filename):
 
 
 def Dijkstra(graph, initial):
-    distances = dict.fromkeys(graph, INFINITY)
+    distances = dict.fromkeys(graph, INF)
 
     distances[initial] = 0
     unvisited = set(graph)
@@ -32,11 +32,30 @@ def Dijkstra(graph, initial):
 
 
 def count_reachable(graph, initial):
+    return len(get_group_members(graph, initial))
+
+
+def get_group_members(graph, initial):
     distances = Dijkstra(graph, initial)
-    return len([(k, v) for (k, v) in distances.items() if v != INFINITY])
+    return {node for (node, distance) in distances.items() if distance != INF}
+
+
+def count_groups(graph):
+    ungrouped = set(graph)
+    counter = 0
+    while ungrouped:
+        print(len(ungrouped))
+        some_node = ungrouped.pop()
+        ungrouped = ungrouped - get_group_members(graph, some_node)
+        counter += 1
+    return counter
 
 
 #  graph = parse('12_input_small.txt')
 graph = parse('12_input.txt')
 
+print('# of nodes reachable from 0')
 print(count_reachable(graph, 0))
+
+print('# of groups in graph')
+print(count_groups(graph))
