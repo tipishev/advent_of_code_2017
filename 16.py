@@ -1,3 +1,6 @@
+BILLION = 1_000_000_000
+
+
 def spin(iterable, at):
     at = int(at)
     return iterable[-at:] + iterable[:-at]
@@ -28,14 +31,49 @@ def parse(filename):
         return result
 
 
-#  ops = parse('16_input_small.txt')
-#  string = 'abcde'
-
+STRING = 'abcdefghijklmnop'
 ops = parse('16_input.txt')
 string = 'abcdefghijklmnop'
 
-for op in ops:
-    string = op(string)
-print(string)
+#  ops = parse('16_input_small.txt')
+#  string = 'abcde'
 
-# error: fadheomkgjpnblic
+
+def permute(s):
+    new_string = s
+    for op in ops:
+        new_string = op(new_string)
+    return new_string
+
+
+#  def create_permutator(before, after):
+#      permutation = [(index_before, after.find(letter))
+#                     for index_before, letter in enumerate(before)]
+#      print(permutation)
+#      return lambda it: [it[after] for before, after in permutation]
+
+
+#  p = create_permutator('abcde', 'baedc')
+
+def brute_count():
+    string = 'abcdefghijklmnop'
+    counter = 0
+    while True:
+        if counter % 100 == 0:
+            print(counter)
+        string = permute(string)
+        counter += 1
+        if string == 'abcdefghijklmnop':
+            break
+    return counter
+
+
+def run():
+    repeats_after = brute_count()
+    string = 'abcdefghijklmnop'
+    for _ in range(BILLION % repeats_after):
+        string = permute(string)
+    print(string)
+
+
+run()
