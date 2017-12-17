@@ -23,6 +23,8 @@ def run(step_size, num_iterations):
     buffer = [0]
     current = 0
     for it in range(1, num_iterations + 1):
+        if it % 10_000 == 0:
+            print(it)
         stop_at = stops_at(buffer, current, step_size)
         #  print(f'insert "{it}" after {stop_at}, new current is "{it}"')
 
@@ -34,4 +36,5 @@ def run(step_size, num_iterations):
     print(buffer[insert_at + 1])
 
 
-run(step_size=355, num_iterations=2017)
+#  run(step_size=355, num_iterations=2017)
+run(step_size=355, num_iterations=50_000_000)
