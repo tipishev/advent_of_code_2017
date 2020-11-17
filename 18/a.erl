@@ -2,12 +2,15 @@
 
 -export([run/0]).
 
+-export([set/2]).
+
 run() ->
     read("small_input.txt").
 
 read(Filename) ->
     {ok, File} = file:open(Filename, read),
-    read(File, []).
+    [{Instruction, Register, Value}|_T] = read(File, []),
+    ?MODULE:Instruction(Register, Value).
 
 read(File, Acc) ->
     case io:get_line(File, '') of
@@ -31,3 +34,6 @@ parse_right_op(RightOperand) ->
     catch error:badarg ->
         list_to_atom(RightOperand)
     end.
+
+set(Register, Value) ->
+    io:format("Setting ~p to ~p~n", [Register, Value]).
