@@ -38,8 +38,8 @@ init(Client) ->
 loop(State = #state{client=Client}) ->
     receive
         {Client, Ref, {run, Commands}} ->
-            Registers = maps:new(),
-            Result = run(Registers, Commands, _Current=1, undefined),
+            Regs = maps:new(),
+            Result = run(Regs, Commands, _Current=1, undefined),
             Client ! {Ref, Result},
             loop(State);
         {Client, Ref, shutdown} ->
@@ -50,54 +50,53 @@ loop(State = #state{client=Client}) ->
             loop(State)
     end.
 
+run(_, Commands, Current, _) when Current > length(Commands)-> out_of_bounds;
+run(_, _, Current, _) when Current < 0 -> out_of_bounds;
+run(Regs, Commands, Current, LastSnd) ->
 
-run(Registers, Commands, Current, LastSnd) ->
     Command = lists:nth(Current, Commands),
+
+    % shortcuts
+    Resolve = fun(Arg) -> resolve(Arg,  Regs) end,
+    Get = fun(Reg) -> maps:get(Reg, Regs, 0) end,
+    Set = fun(Reg, Value) -> Regs#{Reg => Value} end,
+    Nop = fun() -> run(Regs, Commands, Current + 1, LastSnd) end,
+
     case Command of
 
         {set, {reg, Reg}, Arg} ->
-            NewRegisters = Registers#{Reg => resolve(Arg, Registers)},
-            run(NewRegisters, Commands, Current + 1, LastSnd);
+            run(Set(Reg, Resolve(Arg)), Commands, Current + 1, LastSnd);
 
         {add, {reg, Reg}, Arg} ->
-            OldValue = maps:get(Reg, Registers, 0),
-            NewValue = OldValue + resolve(Arg, Registers),
-            run(Registers#{Reg => NewValue}, Commands, Current + 1, LastSnd);
+            run(Set(Reg, Get(Reg) + Resolve(Arg)), Commands, Current + 1, LastSnd);
 
         {mul, {reg, Reg}, Arg} ->
-            OldValue = maps:get(Reg, Registers, 0),
-            NewValue = OldValue * resolve(Arg, Registers),
-            run(Registers#{Reg => NewValue}, Commands, Current + 1, LastSnd);
+            run(Set(Reg, Get(Reg) * Resolve(Arg)), Commands, Current + 1, LastSnd);
 
         {mod, {reg, Reg}, Arg} ->
-            OldValue = maps:get(Reg, Registers, 0),
-            NewValue = OldValue rem resolve(Arg, Registers),
-            run(Registers#{Reg => NewValue}, Commands, Current + 1, LastSnd);
+            run(Set(Reg, Get(Reg) rem Resolve(Arg)), Commands, Current + 1, LastSnd);
 
         {snd, {reg, Reg}} ->
-            Snd = maps:get(Reg, Registers, 0),
-            run(Registers, Commands, Current + 1, Snd);
+            run(Regs, Commands, Current + 1, _LastSend=Get(Reg));
 
         {rcv, {reg, Reg}} ->
-            case maps:get(Reg, Registers, 0) of
-                0 -> run(Registers, Commands, Current + 1, LastSnd);  % NOP
+            case get(Reg) of
+                0 -> Nop();
                 _ -> LastSnd  % the money shot
             end;
 
         {jgz, {reg, Reg}, Arg} ->
-            RegValue = maps:get(Reg, Registers, 0),
-            case RegValue > 0 of
+            case Get(Reg) > 0 of
                 true ->
-                    Offset = resolve(Arg, Registers),
-                    run(Registers, Commands, Current + Offset, LastSnd);
+                    run(Regs, Commands, Current +  Resolve(Arg), LastSnd);
                 false ->
-                    run(Registers, Commands, Current + 1, LastSnd)
+                    run(Regs, Commands, Current + 1, LastSnd)
             end;
 
         Any -> 
-            {unknown, Any, regs, Registers}
+            {unknown, Any, regs, Regs}
     end.
 
-resolve({int, Int}, _Registers) -> Int;
-resolve({reg, Reg}, Registers) ->
-    maps:get(Reg, Registers, 0).
+resolve({int, Int}, _Regs) -> Int;
+resolve({reg, Reg}, Regs) ->
+    maps:get(Reg, Regs, 0).

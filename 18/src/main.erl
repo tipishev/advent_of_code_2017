@@ -6,8 +6,8 @@
 %%% Public API
 run() ->
     InputServer = input_server:start_link(),
-    % Filename =  "../inputs/small_input.txt",
-    Filename =  "../inputs/input.txt",
+    Filename =  "../inputs/small_input.txt",
+    % Filename =  "../inputs/input.txt",
     Commands = input_server:read_commands(InputServer, Filename),
 
     CalcServer = calc_server:start_link(),
