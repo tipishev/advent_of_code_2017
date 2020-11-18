@@ -56,25 +56,26 @@ run(Regs, Commands, Current, LastSnd) ->
 
     Command = lists:nth(Current, Commands),
 
-    % shortcuts
+    % shortcut functions
     Resolve = fun(Arg) -> resolve(Arg,  Regs) end,
     Get = fun(Reg) -> maps:get(Reg, Regs, 0) end,
     Set = fun(Reg, Value) -> Regs#{Reg => Value} end,
-    Nop = fun() -> run(Regs, Commands, Current + 1, LastSnd) end,
+    Advance = fun(NewRegs) -> run(NewRegs, Commands, Current + 1, LastSnd) end,
+    Nop = fun() -> Advance(Regs) end,
 
     case Command of
 
         {set, {reg, Reg}, Arg} ->
-            run(Set(Reg, Resolve(Arg)), Commands, Current + 1, LastSnd);
+            Advance(Set(Reg, Resolve(Arg)));
 
         {add, {reg, Reg}, Arg} ->
-            run(Set(Reg, Get(Reg) + Resolve(Arg)), Commands, Current + 1, LastSnd);
+            Advance(Set(Reg, Get(Reg) + Resolve(Arg)));
 
         {mul, {reg, Reg}, Arg} ->
-            run(Set(Reg, Get(Reg) * Resolve(Arg)), Commands, Current + 1, LastSnd);
+            Advance(Set(Reg, Get(Reg) * Resolve(Arg)));
 
         {mod, {reg, Reg}, Arg} ->
-            run(Set(Reg, Get(Reg) rem Resolve(Arg)), Commands, Current + 1, LastSnd);
+            Advance(Set(Reg, Get(Reg) rem Resolve(Arg)));
 
         {snd, {reg, Reg}} ->
             run(Regs, Commands, Current + 1, _LastSend=Get(Reg));
@@ -85,12 +86,12 @@ run(Regs, Commands, Current, LastSnd) ->
                 _ -> LastSnd  % the money shot
             end;
 
-        {jgz, {reg, Reg}, Arg} ->
+        {jgz, {reg, Reg}, Arg}->
             case Get(Reg) > 0 of
                 true ->
                     run(Regs, Commands, Current +  Resolve(Arg), LastSnd);
                 false ->
-                    run(Regs, Commands, Current + 1, LastSnd)
+                    Nop()
             end;
 
         Any -> 
